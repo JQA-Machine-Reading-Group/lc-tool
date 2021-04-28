@@ -1,5 +1,7 @@
 # LC Document Tool
 
+Available live at: https://lct.jbec.us
+
 Video Demo: https://youtu.be/UyPV7N6FHfE
 
 ## Local Development Environment (Not IDE Specific)
