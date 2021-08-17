@@ -1,9 +1,17 @@
 let firebaseLoggedIn;
 
+var primaryColor = getComputedStyle(document.documentElement).getPropertyValue("--primary-color").trim();
+
+
 $('.nav-link').filter((i, item) => item.href === window.location.href)
-    .attr("href", "#")
-    .parent('.nav-item')
-    .addClass('active');
+    .attr("href", "#");
+
+$('.nav-link').click(function() {
+    let href = $(this).attr("href");
+    if (href !== '#') {
+        window.sessionStorage.setItem("loginTarget", href)
+    }
+})
 
 if (window.location.href.includes("testenv") || window.location.href.includes("demo")) {
     $('.demo-warning')
@@ -52,8 +60,22 @@ function initLogin(id) {
                             'Content-Type': 'application/json'
                         },
                         body: data
-                    }
-                    ).then(response => window.location = "/")
+                    }).then(response => response.json())
+                        .then(data => {
+                            {
+                                if (data.error) {
+                                    window.location = "/requestInvite";
+                                } else {
+                                    let target = window.sessionStorage.getItem("loginTarget");
+                                    notify("Login Successful", 3000);
+                                    if (target != null) {
+                                        window.location = target;
+                                    } else {
+                                        window.location = "/";
+                                    }
+                                }
+                            }
+                        })
                 );
                 return false;
             }
@@ -61,9 +83,6 @@ function initLogin(id) {
     });
 }
 
-function getBearerToken() {
-    return firebase.auth().currentUser.getIdToken();
-}
 
 async function getBearerTokenWithPrompt() {
     if (!firebaseLoggedIn) {
@@ -73,72 +92,20 @@ async function getBearerTokenWithPrompt() {
     return firebase.auth().currentUser.getIdToken();
 }
 
-function doBackendAuth(callback) {
-    firebase.auth().currentUser.getIdToken().then(data => fetch('/firebaseLogin', {
-            method: 'post',
-            headers: {
-                'Accept': 'application/json, text/plain, */*',
-                'Content-Type': 'application/json'
-            },
-            body: data
-        }).then(response => callback.call())
-    );
-
-}
-// function doBackendAuth(callback) {
-//     firebase.auth().currentUser.getIdToken().then(data => {
-//         $.ajax({
-//             type: "POST",
-//             headers: {
-//                 'Accept': 'application/json, text/plain, */*',
-//                 'Content-Type': 'application/json'
-//             },
-//             url: '/firebaseLogin',
-//             body: data,
-//             success: function (data) {
-//                 console.log("submission success");
-//                 callback.call();
-//             },
-//             error: function (XMLHttpRequest, textStatus, errorThrown) {
-//                 console.log(errorThrown);
-//             }
-//         });
-//         }
-//     );
-
-// }
-
-function popupLogin(callback, backendAuth) {
-    if (!firebaseLoggedIn) {
-        firebase.auth()
-            .signInWithPopup(new firebase.auth.GoogleAuthProvider())
-            .then((result) => {
-                if (backendAuth) {
-                    doBackendAuth(callback);
-                } else {
-                    callback.call();
-                }
-            });
-    } else {
-        if (backendAuth) {
-            doBackendAuth(callback);
-        } else {
-            callback.call();
-        }
-    }
-}
-
 firebase.auth().onAuthStateChanged(function (user) {
-    if (user) {
-        firebaseLoggedIn = true;
-        console.log("Logged in.")
-    } else {
-        //$('.req-auth').hide();
-        firebaseLoggedIn = false;
-        console.log("Not logged in.")
-    }
+    firebaseLoggedIn = !!user;
     $('.wait-for-auth').removeClass('hidden-occupy');
 });
 
 firebase.auth();
 
+if(window.location.hostname === 'localhost') {
+    fetch('/firebaseLogin', {
+        method: 'post',
+        headers: {
+            'Accept': 'application/json, text/plain, */*',
+            'Content-Type': 'application/json'
+        },
+        body: 'devtoken'
+    });
+}
